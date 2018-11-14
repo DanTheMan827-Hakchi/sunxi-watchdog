@@ -112,7 +112,7 @@ int main(int argc, char * argv[]) {
 
     joyFd = open("/dev/input/by-path/platform-twi.1-event-joystick", O_RDONLY);
 
-    std::thread joyThread(key_watcher, joyFd, BTN_MODE, "pad", "home");
+    std::thread joyThread(key_watcher, joyFd, BTN_MODE, "joy", "home");
     std::thread resetThread(key_watcher, resetFd, KEY_VOLUMEUP, "key", "reset");
     std::thread powerThread(key_watcher, powerFd, KEY_POWER, "key", "power");
 

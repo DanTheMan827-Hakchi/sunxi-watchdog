@@ -42,23 +42,20 @@ void key_watcher(int inputFd, short keyCode, std::string type, std::string descr
         return;
     }
 
-    timeval pushTime, currentTime;
-    gettimeofday(&pushTime, NULL);
+    timeval changeTime, currentTime;
+    gettimeofday(&changeTime, NULL);
 
     input_event event;
     int num;
     while (read(inputFd, &event, (sizeof event)) > 0) {
         if (event.type == EV_KEY && event.code == keyCode) {
             timeval diff;
-
-            if (event.value == 1) {
-                gettimeofday(&pushTime, NULL);
-                fprintf(stdout, "%s %s %i\n", type.c_str(), description.c_str(), event.value);
-            } else {
-                gettimeofday(&currentTime, NULL);
-                timeval_subtract(&diff, &currentTime, &pushTime);
-                fprintf(stdout, "%s %s %i %li\n", type.c_str(), description.c_str(), event.value, (diff.tv_sec * 1000) + (diff.tv_usec / 1000));
-            }
+            
+            gettimeofday(&currentTime, NULL);
+            timeval_subtract(&diff, &currentTime, &changeTime);
+            fprintf(stdout, "%s %s %i %li\n", type.c_str(), description.c_str(), event.value, (diff.tv_sec * 1000) + (diff.tv_usec / 1000));
+            gettimeofday(&changeTime, NULL);
+            
             fflush(stdout);
         }
     }
@@ -115,7 +112,7 @@ int main(int argc, char * argv[]) {
 
     joyFd = open("/dev/input/by-path/platform-twi.1-event-joystick", O_RDONLY);
 
-    std::thread joyThread(key_watcher, joyFd, BTN_MODE, "joy", "home");
+    std::thread joyThread(key_watcher, joyFd, BTN_MODE, "pad", "home");
     std::thread resetThread(key_watcher, resetFd, KEY_VOLUMEUP, "key", "reset");
     std::thread powerThread(key_watcher, powerFd, KEY_POWER, "key", "power");
 

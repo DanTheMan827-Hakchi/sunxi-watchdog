@@ -37,7 +37,7 @@ int timeval_subtract (struct timeval *result, struct timeval *x, struct timeval 
 }
 
 void key_watcher(int inputFd, short keyCode, std::string type, std::string description) {
-    if (inputFd == -1) {
+    if (inputFd < 0) {
         fprintf(stderr, "Cannot access %s state\n", description.c_str());
         return;
     }
@@ -97,7 +97,7 @@ int main(int argc, char * argv[]) {
                     std::string temp;
                     std::getline(in, temp);
                     in.close();
-                    if(temp == "sunxi-knob") {
+                    if((temp == "sunxi-knob")||(temp == "gpio-keys")) {
                         powerFd = open(("/dev/input/"+name).c_str(), O_RDONLY);
                     } else if(temp == "sunxi-keyboard") {
                         resetFd = open(("/dev/input/"+name).c_str(), O_RDONLY);
@@ -106,6 +106,23 @@ int main(int argc, char * argv[]) {
             }
         }
         closedir(dir);
+        if ((resetFd<0) && (dir = opendir("/dev/input/"))) {
+          while (dirent *entry = readdir(dir)) {
+            std::string name(entry->d_name);
+            if (name.find("event") != std::string::npos) {
+              std::ifstream in(("/sys/class/input/"+name+"/device/name").c_str());
+              if (in.good()) {
+                std::string temp;
+                std::getline(in, temp);
+                in.close();
+                if(temp == "gpio-keys") {
+                  resetFd = open(("/dev/input/"+name).c_str(), O_RDONLY);
+                }
+              }
+            }
+          }
+          closedir(dir);
+        }
     } else {
         powerFd = open("power", O_RDONLY);
         resetFd = open("reset", O_RDONLY);
@@ -113,7 +130,9 @@ int main(int argc, char * argv[]) {
         fflush(stderr);
     }
 
-    joyFd = open("/dev/input/by-path/platform-twi.1-event-joystick", O_RDONLY);
+    joyFd = open("/dev/input/event4", O_RDONLY);
+    if(joyFd<0)
+      joyFd = open("/dev/input/event24", O_RDONLY);
 
     std::thread joyThread(key_watcher, joyFd, BTN_MODE, "joy", "home");
     std::thread resetThread(key_watcher, resetFd, KEY_VOLUMEUP, "key", "reset");
